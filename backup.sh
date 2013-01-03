@@ -5,6 +5,7 @@
 #### DEBUG ####
 
 ####### CONFIG START #######
+CONFIG_FILE=~/.ftp_backup
 
 TAR_DIRS="/"
 TAR_EXCLUDE_DIRS="/dev /lost+found /media /mnt /proc /run /sys /tmp /var/lock /var/run /var/tmp"
@@ -16,7 +17,11 @@ TMP_DIR="/tmp"
 FTP_FILE_COUNT=5
 
 # load sensitive data
-. ~/.ftp_backup
+if [ -z $CONFIG_FILE ]; then
+	echo "No config file ($CONFIG_FILE) given - quit!"
+	exit 1
+fi
+. $CONFIG_FILE
 
 # config file may contains
 #FTP_HOST="ftp.example.com"
@@ -30,7 +35,7 @@ FTP_FILE_COUNT=5
 CURR_DIR=$PWD
 DATE_STRING=$(date +'%F')
 BACKUP_DIR="${TMP_DIR}/ftp_backup-${DATE_STRING}"
-PREFIX=${BACKUP_PREFIX:-`hostname`}
+PREFIX=${BACKUP_PREFIX:-$(hostname1 2>/dev/null || echo "backup")}
 FILE_NAME="${PREFIX}-${DATE_STRING}"
 UPLOAD_FILENAME=""
 
@@ -88,7 +93,9 @@ function start_backup() {
 	echo -n "Starting tar-ing directories: "
 	tar_output=$(tar -c ${TAR_OPT} -f ${tar_filename} ${EXCLUDE_DIRS} ${TAR_DIRS} 2>&1)
 	tar_success=$?
-	if [ "$tar_success" -gt 0 ]; then
+	# 0 'successful exit'
+	# 1 'Some files differ' - e.q. 'file changed while reading' - is O.K. for us
+	if [ "$tar_success" -gt 1 ]; then
 		UPLOAD_FILENAME=
 		echo "unsuccessful!"
 		echo "Error-report:\n$tar_output"
