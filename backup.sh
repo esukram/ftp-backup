@@ -46,6 +46,21 @@ TAR_OPT=""
 OPENSSL_OPT="aes-256-cbc -e -salt -pass file:${ENC_PASS_FILE}"
 TMP_BACKUP_FILE=""
 
+function check_commands() {
+
+	# list of mandatory binaries
+	needed_binaries="tar ftp"
+	
+	# check for list of mandatory binaries
+	for binary in $needed_binaries; do
+		binary_check=$(which $binary 2>/dev/null)
+		if [ "x${binary_check}" = "x" ]; then
+			echo "No '${binary}' binary found which is mandatory - exit!"
+			exit 1
+		fi
+	done
+}
+
 function clean_up_temp_dir() {
 	if [ -d $BACKUP_DIR ]; then
 		echo -n "Cleaning temp-dir '${BACKUP_DIR}': "
@@ -191,6 +206,9 @@ EOFTP
 	)
 	echo "done."
 }
+
+# check for at least needed commands
+check_commands
 
 # clean-up temp dir - if already exists
 clean_up_temp_dir
