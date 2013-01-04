@@ -17,7 +17,7 @@ TMP_DIR="/tmp"
 FTP_FILE_COUNT=5
 
 # load sensitive data
-if [ -z $CONFIG_FILE ]; then
+if [ ! -f $CONFIG_FILE ]; then
 	echo "No config file ($CONFIG_FILE) given - quit!"
 	exit 1
 fi
@@ -32,6 +32,7 @@ fi
 
 ####### CONFIG   END #######
 
+TS_START=$(date +'%s')
 CURR_DIR=$PWD
 DATE_STRING=$(date +'%F')
 BACKUP_DIR="${TMP_DIR}/ftp_backup-${DATE_STRING}"
@@ -55,7 +56,7 @@ function check_commands() {
 	for binary in $needed_binaries; do
 		binary_check=$(which $binary 2>/dev/null)
 		if [ "x${binary_check}" = "x" ]; then
-			echo "No '${binary}' binary found which is mandatory - exit!"
+			echo "No '${binary}' binary found which is mandatory - quit!"
 			exit 1
 		fi
 	done
@@ -105,7 +106,7 @@ function start_backup() {
 		EXCLUDE_DIRS="${EXCLUDE_DIRS} --exclude=${exclude_dir}"
 	done
 
-	echo -n "Starting tar-ing directories: "
+	echo -n "Tar-ing directories: "
 	tar_output=$(tar -c ${TAR_OPT} -f ${tar_filename} ${EXCLUDE_DIRS} ${TAR_DIRS} 2>&1)
 	tar_success=$?
 	# 0 'successful exit'
@@ -113,7 +114,7 @@ function start_backup() {
 	if [ "$tar_success" -gt 1 ]; then
 		UPLOAD_FILENAME=
 		echo "unsuccessful!"
-		echo "Error-report:\n$tar_output"
+		echo -e "Error-report:\n$tar_output"
 		exit 2
 	else
 		UPLOAD_FILENAME=$tar_filename
@@ -123,16 +124,22 @@ function start_backup() {
 
 function encrypt_file() {
 	cd $BACKUP_DIR
-        tar_file=$UPLOAD_FILENAME
+
+	tar_file=$UPLOAD_FILENAME
 	out_file="${tar_file}.enc"
 
-	echo -n "Starting encrypting '${tar_file}': "
+	if [[ "x${tar_file}" = "x" || ( ! -f $tar_file ) ]]; then
+		echo "No valid tar-file '${tar_file}' found - quit!"
+		exit 1
+	fi
+
+	echo -n "Encrypting '${tar_file}': "
 	enc_output=$(openssl ${OPENSSL_OPT} -in ${tar_file} -out ${out_file} 2>&1)
 	enc_success=$?
 	if [ "$enc_success" -gt 0 ]; then
 		UPLOAD_FILENAME=
 		echo "unsuccessful!"
-		echo "Error-report:\n$enc_output"
+		echo -e "Error-report:\n${enc_output}"
 		exit 2
 	else
 		UPLOAD_FILENAME=$out_file
@@ -143,7 +150,7 @@ function encrypt_file() {
 
 function clean_up_ftp() {
 	cd $BACKUP_DIR
-	echo -n "Clean-up old backups: "
+	echo -n "Loading backups on ftp host '${FTP_HOST}' in directory '${FTP_DIR}': "
 	ftp_dir_listing=$(ftp -n ${FTP_HOST} 2> ftp_upload.log << EOFTP
 ascii
 user $FTP_USER $FTP_PASS
@@ -153,7 +160,7 @@ dir
 quit
 EOFTP
 	)
-	echo " done."
+	echo "done."
 
 	# switch separator - and remember old one
 	OLD_IFS=$IFS
@@ -207,6 +214,8 @@ EOFTP
 	echo "done."
 }
 
+echo "Started backup at: $(date +'%H:%M:%S')."
+
 # check for at least needed commands
 check_commands
 
@@ -232,3 +241,7 @@ cd $CURR_DIR
 
 # finally clean-up temp dir
 clean_up_temp_dir
+
+TS_FINISH=$(date +'%s')
+((DURATION = TS_FINISH - TS_START))
+echo "Finished backup at: $(date +'%H:%M:%S') - took $DURATION seconds."
