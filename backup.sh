@@ -148,9 +148,22 @@ function encrypt_file() {
 	tar_file=$UPLOAD_FILENAME
 	out_file="${tar_file}.enc"
 
+	# check if at least a base file is existing
 	if [[ "x${tar_file}" = "x" || ( ! -f $tar_file ) ]]; then
 		echo "No valid tar-file '${tar_file}' found - quit!"
 		exit 1
+	fi
+
+	# check for encryption pass file
+	if [ "x${ENC_PASS_FILE}" = "x" ]; then
+		echo "No ecryption passphrase file set - no ecryption is used."
+		return 0
+	fi
+
+	# check if pass file is existing
+	if ! [ -f $ENC_PASS_FILE ]; then
+		echo "Specified encryption passphrase file is not existing - no ecryption is used."
+		return 0
 	fi
 
 	echo -n "Encrypting '${tar_file}': "
@@ -159,7 +172,7 @@ function encrypt_file() {
 	if [ "$enc_success" -gt 0 ]; then
 		UPLOAD_FILENAME=
 		echo "unsuccessful!"
-		echo -e "Error-report:\n${enc_output}"
+		echo -e "\tError-report:\n\t\t${enc_output}"
 		exit 2
 	else
 		UPLOAD_FILENAME=$out_file
