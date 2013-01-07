@@ -28,6 +28,8 @@ fi
 #FTP_USER="ftp_user"
 #FTP_PASS="ftp_pass"
 #FTP_DIR="/base"
+#MYSQL_USER="mysqlUser"
+#MYSQL_PASS="mysqlPass"
 #ENC_PASS_FILE="/root/.ftp_backup_pass"
 
 ####### CONFIG   END #######
@@ -83,9 +85,28 @@ function flush_mysql() {
 		return
 	fi
 
-	echo -n "Flushing mySql"
-	mysql -e 'flush tables;'
-	echo "done."
+	# check for mysql user/ pass
+	flush_user=${MYSQL_USER:-$USER}
+	flush_pass=
+	if [ "x${MYSQL_USER}" = "x" ]; then
+		echo "Using current user '${flush_user}' and no password for flushing - may not working."
+	else
+		if [ "x${MYSQL_PASS}" = "x" ]; then
+			echo "No mySql password set for flushing - may not working."
+		else
+			flush_pass="--password=${MYSQL_PASS}"
+		fi
+	fi
+
+	echo -n "Flushing mySql with user '${flush_user}': "
+	mysql_output=$(mysql -u $flush_user $flush_pass -e 'flush tables;' 2>&1)
+	mysql_success=$?
+	if [ "$mysql_success" -gt 0 ]; then
+		echo "unsuccessful!"
+		echo -e "\tError-report:\n\t\t${mysql_output}"
+	else
+		echo "done."
+	fi
 }
 
 function start_backup() {
@@ -102,7 +123,6 @@ function start_backup() {
         EXCLUDE_DIRS=""
 	for exclude_dir in ${TAR_EXCLUDE_DIRS}
 	do
-		echo "Adding '$exclude_dir' to excluded dirs"
 		EXCLUDE_DIRS="${EXCLUDE_DIRS} --exclude=${exclude_dir}"
 	done
 
