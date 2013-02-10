@@ -64,6 +64,16 @@ function check_commands() {
 	done
 }
 
+function calculate_size() {
+	file_name=$1
+	file_size=$(du -h $file_name 2>/dev/null | awk '{print $1}')
+	if [ "x${file_size}" = "x" ]; then
+		echo "unknown"
+	else
+		echo "$file_size"
+	fi
+}
+
 function clean_up_temp_dir() {
 	if [ -d $BACKUP_DIR ]; then
 		echo -n "Cleaning temp-dir '${BACKUP_DIR}': "
@@ -138,7 +148,8 @@ function start_backup() {
 		exit 2
 	else
 		UPLOAD_FILENAME=$tar_filename
-		echo "done (upload-file: '${UPLOAD_FILENAME}')."
+		UPLOAD_FILE_SIZE=$(calculate_size ${UPLOAD_FILENAME})
+		echo "done (upload-file: '${UPLOAD_FILENAME}' | ${UPLOAD_FILE_SIZE})."
 	fi
 }
 
@@ -176,7 +187,8 @@ function encrypt_file() {
 		exit 2
 	else
 		UPLOAD_FILENAME=$out_file
-		echo "done (upload-file: '${UPLOAD_FILENAME}')."
+		UPLOAD_FILE_SIZE=$(calculate_size ${UPLOAD_FILENAME})
+		echo "done (upload-file: '${UPLOAD_FILENAME}' | ${UPLOAD_FILE_SIZE})."
 	fi
 
 }
