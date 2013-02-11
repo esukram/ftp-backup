@@ -74,6 +74,23 @@ function calculate_size() {
 	fi
 }
 
+function calculate_pretty_duration() {
+	duration=$1
+
+	if [ "$duration" -lt 60 ]; then
+		echo "${duration} second(s)"
+	elif [ "$duration" -lt 3600 ]; then
+		((minutes=duration/60))
+		((seconds=duration%60))
+		echo "${minutes} minute(s) ${seconds} second(s)"
+	else
+		((hours=duration/3600))
+		((minutes=(duration-(hours*3600))/60))
+		((seconds=(duration-(hours*3600))%60))
+		echo "${hours} hour(s) ${minutes} minute(s) ${seconds} second(s)"
+	fi
+}
+
 function clean_up_temp_dir() {
 	if [ -d $BACKUP_DIR ]; then
 		echo -n "Cleaning temp-dir '${BACKUP_DIR}': "
@@ -259,7 +276,7 @@ EOFTP
 	echo "done."
 }
 
-echo "Started backup at: $(date +'%H:%M:%S')."
+echo "Started backup at: $(date +'%H:%M:%S %Z')."
 
 # check for at least needed commands
 check_commands
@@ -289,4 +306,5 @@ clean_up_temp_dir
 
 TS_FINISH=$(date +'%s')
 ((DURATION = TS_FINISH - TS_START))
-echo "Finished backup at: $(date +'%H:%M:%S') - took $DURATION seconds."
+PRETTY_DURATION=$(calculate_pretty_duration ${DURATION})
+echo "Finished backup at: $(date +'%H:%M:%S') - took ${PRETTY_DURATION} (${DURATION} sec.)."
