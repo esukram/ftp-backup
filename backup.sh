@@ -16,6 +16,9 @@ TMP_DIR="/tmp"
 # how many files to keep
 FTP_FILE_COUNT=5
 
+# optional tar options
+TAR_OPT=""
+
 # load sensitive data
 if [ ! -f $CONFIG_FILE ]; then
 	echo "No config file ($CONFIG_FILE) given - quit!"
@@ -45,7 +48,7 @@ UPLOAD_FILENAME=""
 # add backup dir to exclude dirs - to be safe
 TAR_EXCLUDE_DIRS="$BACKUP_DIR $TAR_EXCLUDE_DIRS"
 
-TAR_OPT=""
+TMP_TAR_OPT="${TAR_OPT}"
 OPENSSL_OPT="aes-256-cbc -e -salt -pass file:${ENC_PASS_FILE}"
 TMP_BACKUP_FILE=""
 
@@ -154,7 +157,7 @@ function start_backup() {
 	done
 
 	echo -n "Tar-ing directories: "
-	tar_output=$(tar -c ${TAR_OPT} -f ${tar_filename} ${EXCLUDE_DIRS} ${TAR_DIRS} 2>&1)
+	tar_output=$(tar -c ${TMP_TAR_OPT} -f ${tar_filename} ${EXCLUDE_DIRS} ${TAR_DIRS} 2>&1)
 	tar_success=$?
 	# 0 'successful exit'
 	# 1 'Some files differ' - e.q. 'file changed while reading' - is O.K. for us
